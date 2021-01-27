@@ -1,0 +1,66 @@
+---
+title: "activitiy review for imwut20"
+author: "nattafahh"
+date: "2/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+activities = read.csv("data/activities.csv")
+activity_types = read.csv("data/activity_types.csv")
+methods = read.csv("data/methods.csv")
+activity_types = read.csv("data/activity_types.csv")
+accuracies = read.csv("data/scores.csv")
+```
+
+```{r prepare activities}
+users = methods$user_id
+acts <- activities %>% select(activity_type_id,user_id) %>% filter(user_id %in% c(users))
+df.act <- merge(x = acts, y = methods[ , c("method", "user_id")], by = "user_id")
+df.act <- merge(x = df.act, y = activity_types[ , c("name", "id")], by.x = "activity_type_id", by.y = "id") # which is merge.data.table
+df.act <- as_tibble(df.act)
+```
+
+
+```{r summarize activities}
+acts %>% select(activity_type_id) %>% dplyr::summarise(n=n()) #labels
+```
+
+
+```{r analyze activities}
+df.act %>% 
+  group_by(name, method) %>% dplyr::summarise(freq = n())
+
+df.act  <- df.act %>%  group_by(method, name, activity_type_id) %>%
+  dplyr::summarise(freq = n()) %>%
+  ungroup() %>%
+  mutate(act = paste(activity_type_id, name, sep=" "),
+         total = sum(freq),
+         prop = freq/total)
+
+df.act 
+```
+
+
+```{r kruskal test}
+kruskal.test(freq ~ method, data=df.act)
+```
+
+```{r plot activities}
+ggplot_df.act <- ggplot(data=df.act, aes(x=reorder(act, -freq), y=freq, label=freq, fill=factor(method, levels=c("AL","AL+CD","BL")))) +
+  geom_bar(stat="identity") +
+  # geom_text(aes(label = freq), position = position_fill(vjust = .5)) +
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Blues") +
+  theme(legend.position = "top", legend.title=element_blank(), axis.text.x = element_text(angle = 0, hjust = 1)) +
+    coord_flip() +
+  xlab("Activity classes") + ylab("Labels") 
+ggplot_df.act
+ggsave("fig/plot_activities.pdf", device = "pdf",plot = ggplot_df.act,
+       dpi = 300, height = 4, width = 10)
+```  
+  

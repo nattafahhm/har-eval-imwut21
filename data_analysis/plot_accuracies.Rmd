@@ -1,0 +1,95 @@
+---
+title: "accuracy review for imwut20"
+author: "nattafahh"
+date: "2/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+activities = read.csv("data/activities.csv")
+activity_types = read.csv("data/activity_types.csv")
+methods = read.csv("data/methods.csv")
+activity_types = read.csv("data/activity_types.csv")
+accuracies = read.csv("data/scores.csv")
+```
+
+
+```{r prepare accuracies}  
+df.accuracy <- accuracies
+df.accuracy <- merge(x = df.accuracy, y = activity_types[ , c("name", "id")], by.x = "auc_class", by.y = "id") # which is merge.data.table
+df.accuracy <- merge(x = df.accuracy, methods[ , c("method", "user_id")], by = "user_id") # which is merge.data.table
+df.accuracy$auc_test <- as.numeric(df.accuracy$auc_test )
+df.accuracy$auc_val <- as.numeric(df.accuracy$auc_val)
+```
+
+
+```{r analze accuracies}
+(df.accuracy_mean <- df.accuracy %>%
+  group_by(auc_class, method) %>%
+  dplyr::summarise(mean.auc_test = round(mean(auc_test),5),
+                   sd.auc_test = round(sd(auc_test),5),
+                   mean.auc_val =  round(mean(auc_val),5)) %>%
+  arrange(method))
+
+(df.accuracy_mean <- df.accuracy %>%
+  group_by(name, method) %>%
+  dplyr::summarise(mean.auc_test = round(mean(auc_test),2),
+                   sd.auc_test = round(sd(auc_test),2),
+                   mean.auc_val =  round(mean(auc_val),2)))
+```  
+  
+  
+```{r plot auc test}
+ggplot_df.accuracy <- ggplot(df.accuracy, aes(x = name, y = auc_test, fill = method)) +
+    geom_boxplot(outlier.shape = NA, alpha=0.9, outlier.fill = NULL,
+                 notch = FALSE, notchwidth = 0.5, varwidth = TRUE) +
+  theme(legend.position = "top", legend.title=element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab("Activity classes") + ylab("AUC") +
+ scale_fill_brewer(palette="Blues") 
+ggplot_df.accuracy
+ggsave("fig/plot_auc_test.pdf", device = "pdf",plot = ggplot_df.accuracy,
+       dpi = 300, height = 3.5, width = 10)
+```  
+
+```{r plot auc val}
+ggplot_df.accuracy <- ggplot(df.accuracy, aes(x = name, y = auc_val, fill = method)) +
+    geom_boxplot(outlier.shape = NA, alpha=0.9, outlier.fill = NULL,
+                 notch = FALSE, notchwidth = 0.5, varwidth = TRUE) +
+  theme(legend.position = "top", legend.title=element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab("Activity classes") + ylab("AUC") +
+ scale_fill_brewer(palette="Blues") 
+ggplot_df.accuracy
+ggsave("fig/plot_auc_val.pdf", device = "pdf",plot = ggplot_df.accuracy,
+       dpi = 300, height = 3.5, width = 10)
+```  
+  
+
+```{r plot mean auc test}
+ggplot_mean.auc_test <- ggplot(data=df.accuracy_mean, aes(x=name, y=mean.auc_test, label=mean.auc_test, fill=factor(method, levels=c("AL","AL+CD","BL")))) +
+  geom_bar(stat="identity") +
+  geom_text(size = 4, position = position_stack(vjust = 0.7), angle = 0) +
+  scale_fill_brewer(palette="Blues") +
+  theme(legend.position = "top", legend.title=element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab("Activity classes") + ylab("AUC") 
+ggplot_mean.auc_test
+ggsave("fig/plot_mean.auc_test_dependent.pdf", device = "pdf",plot = ggplot_mean.auc_test,
+       dpi = 300, height = 3.5, width = 15)
+``` 
+
+```{r plot mean auc val}
+ggplot_mean.auc_test <- ggplot(data=df.accuracy_mean, aes(x=name, y=mean.auc_val, label=mean.auc_val, fill=factor(method, levels=c("AL","AL+CD","BL")))) +
+  geom_bar(stat="identity") +
+  geom_text(size = 4, position = position_stack(vjust = 0.7), angle = 0) +
+  scale_fill_brewer(palette="Blues") +
+  theme(legend.position = "top", legend.title=element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab("Activity classes") + ylab("AUC") 
+ggplot_mean.auc_test
+ggsave("fig/plot_mean.auc_val_dependent.pdf", device = "pdf",plot = ggplot_mean.auc_test,
+       dpi = 300, height = 3.5, width = 15)
+```
+  
+  

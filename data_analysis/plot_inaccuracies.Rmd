@@ -1,0 +1,43 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+df = read.csv("data/predict_inaccuracies")
+```
+
+```{r}
+df.mean <- df %>% group_by(class, method) %>% 
+  dplyr::summarise(mean = round(mean(percentage),2),
+                   sd = round(sd(percentage),2))
+```
+
+```{r}
+ggplot(df.mean, aes(x=reorder(method, mean),  group=factor(method))) + 
+    geom_bar(aes(y = mean, fill=factor(method)), stat="identity", position=position_dodge()) +
+    labs(y = "Percent") +
+  scale_fill_brewer(palette="Blues") +
+   geom_text(aes( label = round(mean,2), y = round(mean,2)), vjust = 1.6) +
+    facet_grid(~class) + 
+  ylab("Percentage") + xlab("") +
+  theme(legend.position = "none", legend.title=element_blank())
+```
+
+```{r}
+ggplot_cheating <- ggplot(df.mean, aes(x= class,  group=method)) +
+    geom_bar(aes(y = mean, fill = factor(class)), stat="identity") +
+    labs(y = "Percent") +
+   scale_fill_brewer(palette="Paired") +
+   geom_text(aes( label = round(mean,2), y = round(mean,2)), vjust = 1.6, size=7) +
+    facet_grid(~factor(method, levels = c("AL+CD", "BL", "AL"))) +
+  ylab("Percentage") + xlab("") +
+    theme(text = element_text(size = 16))+
+  theme(legend.position = "none", legend.title=element_blank())  
+  # scale_fill_manual(values = c("dodgerblue1", "#736F6E"))
+ggplot_cheating
+ggsave("plot_inaccuracies.pdf", device = "pdf",plot = ggplot_cheating,
+       dpi = 300, height = 4, width = 12)
+```

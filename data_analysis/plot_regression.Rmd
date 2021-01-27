@@ -1,0 +1,131 @@
+---
+title: "regression analysis for imwut20"
+author: "nattafahh"
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+activities = read.csv("data/activities.csv")
+activity_types = read.csv("data/activity_types.csv")
+methods = read.csv("data/methods.csv")
+activity_types = read.csv("data/activity_types.csv")
+accuracies = read.csv("data/scores.csv")
+ctr = read.csv("data/ctr.csv")
+```
+
+```{r prepare activities}
+users = methods$user_id
+acts <- activities %>% select(activity_type_id,user_id) %>% filter(user_id %in% c(users))
+df.act <- merge(x = acts, y = methods[ , c("method", "user_id")], by = "user_id")
+df.act <- merge(x = df.act, y = activity_types[ , c("name", "id")], by.x = "activity_type_id", by.y = "id") # which is merge.data.table
+df.act <- as_tibble(df.act)
+```
+
+  
+```{r prepare accuracies}  
+df.accuracy <- accuracies
+df.accuracy <- merge(x = df.accuracy, y = activity_types[ , c("name", "id")], by.x = "auc_class", by.y = "id") # which is merge.data.table
+df.accuracy <- merge(x = df.accuracy, methods[ , c("method", "user_id")], by = "user_id") # which is merge.data.table
+df.accuracy$auc_test <- as.numeric(df.accuracy$auc_test )
+df.accuracy$auc_val <- as.numeric(df.accuracy$auc_val)
+df.accuracy <- merge(x = df.accuracy, ctr[ , c("click_icon", "click_notification", "times", "user_id")], by = "user_id") # which is merge.data.table
+```
+
+
+```{r prepare data for analyzing}
+df.accuracy <- df.accuracy  %>% mutate(ctr = (click_notification/times))
+
+df.test <- df.accuracy %>% select(method, user_id, auc_test, click_icon) %>% 
+  group_by(method, user_id, click_icon)  %>% 
+  dplyr::summarise(auc_test = mean(auc_test)) %>% 
+  arrange(auc_test)
+df.test
+
+df.test2 <- df.accuracy %>% select(method, user_id, auc_test, ctr) %>% 
+  group_by(method, user_id, ctr)  %>% 
+  dplyr::summarise(auc_test = mean(auc_test)) %>% 
+  arrange(auc_test)
+df.test2
+
+df.test3 <- merge(x = df.test2, df.test[ , c("click_icon", "user_id")], by = "user_id") # which is merge.data.table
+```
+
+
+```{r regression analysis}
+model <- lm(auc_test ~ click_icon, data = df.test3)
+summary(model)
+
+model <- lm(auc_test ~ ctr, data = df.test3)
+summary(model)
+
+model <- lm(auc_test ~ click_icon + ctr, data = df.test3)
+summary(model)
+```
+
+```{r plot a correlation matrix}
+df.test4 <-  df.test3 %>% select("auc_test", "click_icon", "ctr")
+
+colnames(df.test4)[which(names(df.test4) == "auc_test")] <- "Recognition accuracy"
+colnames(df.test4)[which(names(df.test4) == "click_icon")] <- "Button press"
+colnames(df.test4)[which(names(df.test4) == "ctr")] <- "CTR"
+
+res <- cor(df.test4)
+round(res, 2)
+
+library(corrr)
+
+df.test4 %>% correlate() %>% network_plot(min_cor=0.6)
+
+library(corrplot)
+corrplot <- corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+corrplot
+```
+
+```{r plot regression button}
+library(ggpmisc)
+library(mgcv)
+formula <- y ~ x
+ggplot_regression_button <- ggplot(data = df.test, 
+       aes(x = click_icon,
+           y = auc_test,
+           colour=method, shape=method)) + 
+  geom_smooth(method="lm", formula = formula, se=TRUE, fullrange=TRUE) + 
+  stat_poly_eq(formula = formula, 
+                aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+                parse = TRUE) +  
+  geom_point(size = 2) +
+  scale_color_brewer(palette="Paired") +
+  xlab("Button press") + ylab("Activity recognition accuracy")
+ggplot_regression_button
+ggsave("fig/plot_regression_button.pdf", device = "pdf",plot = ggplot_regression_button,
+       dpi = 300, height = 4, width = 6)
+```
+  
+  
+  
+```{r plot regression ctr}
+library(ggpmisc)
+library(mgcv)
+formula <- y ~ x
+ggplot_regression_ctr <-ggplot(data = df.test2, 
+       aes(x = ctr,
+           y = auc_test,
+           colour=method, shape=method)) + 
+  geom_smooth(method="lm", formula = formula, se=TRUE, fullrange=TRUE) + 
+  stat_poly_eq(formula = formula, 
+                aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+                parse = TRUE) +  
+  geom_point(size = 2) +
+  scale_color_brewer(palette="Paired") +
+  xlab("CTR") + ylab("Activity recognition accuracy")
+ggplot_regression_ctr
+ggsave("fig/plot_regression_ctr.pdf", device = "pdf",plot = ggplot_regression_ctr,
+       dpi = 300, height = 4, width = 6)
+```
+  

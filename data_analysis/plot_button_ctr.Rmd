@@ -1,0 +1,69 @@
+---
+title: "user engagement review for imwut20"
+author: "nattafahh"
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(car)
+library(broom)
+library(userfriendlyscience)
+```
+
+```{r prepare user engagement data}
+df = read.csv("data/ctr.csv")
+
+df <- df %>% mutate(ctr = (click_notification/times)*100)
+
+df %>% dplyr::summarise(click_icon = sum(click_icon))
+
+df %>% group_by(method)  %>%
+  dplyr::summarise(click_icon = mean(click_icon), 
+                   click_notification = mean(ctr))
+
+df %>% group_by(method)  %>%
+  dplyr::summarise(click_icon = sd(click_icon), 
+                   click_notification = sd(ctr))
+```
+
+
+```{r kruskal test}
+kruskal.test(click_icon ~ method, data=df)
+kruskal.test(ctr ~ method, data=df)
+```
+
+
+```{r plot button press}
+ggplot <- ggplot(df, aes(x = method, y = click_icon, fill = method)) +
+  geom_boxplot(outlier.shape = NA, alpha=0.9, outlier.fill = NULL,
+               notch = FALSE, notchwidth = 0.5, varwidth = TRUE) +
+  theme(legend.position = "top", legend.title=element_blank(), 
+        axis.text.x = element_text(angle = 0, hjust = 1)) +
+  xlab("") + ylab("Number of button press") +
+  scale_fill_brewer(palette="Blues") 
+ggplot
+ggsave("fig/plot_button_press.pdf", device = "pdf",plot = ggplot,
+       dpi = 300, height = 3, width = 3)
+
+```
+
+
+```{r plot click_icon ctr}
+ggplot <- ggplot(df, aes(x = method, y = ctr, fill = method)) +
+  geom_boxplot(outlier.shape = NA, alpha=0.9, outlier.fill = NULL,
+               notch = FALSE, notchwidth = 0.5, varwidth = TRUE) +
+  theme(legend.position = "top", legend.title=element_blank(), 
+        axis.text.x = element_text(angle = 0, hjust = 1)) +
+  xlab("") + ylab("% Notification with button press") +
+  scale_fill_brewer(palette="Blues") 
+ggplot
+ggsave("fig/plot_ctr.pdf", device = "pdf",plot = ggplot,
+       dpi = 300, height = 3, width = 3)
+```
+

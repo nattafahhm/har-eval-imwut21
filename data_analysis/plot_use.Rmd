@@ -1,0 +1,83 @@
+---
+title: "user engagement scale review for imwut20"
+author: "nattafahh"
+date: ""
+output: html_document
+---
+
+```{r prepare data}
+df = read.csv("data/use.csv")
+df <- df %>% dplyr::mutate(fa = rowSums(.[3:5]), 
+                           pu = rowSums(.[6:8]),
+                           ae = rowSums(.[9:11]),
+                           rw = rowSums(.[12:14]))
+
+df <- df %>% dplyr::mutate(overall = rowSums(.[15:18]))
+```
+
+
+```{r summarize data}
+df %>% group_by(method) %>% dplyr::summarise(fa = mean(fa)/3,
+                                             pu = mean(pu)/3,
+                                             ae = mean(ae)/3,
+                                             rw = mean(rw)/3,
+                                             overall = mean(overall)/3) 
+
+df %>% group_by(method) %>% dplyr::summarise(fa = sd(fa)/3,
+                                             pu = sd(pu)/3,
+                                             ae = sd(ae)/3,
+                                             rw = sd(rw)/3,
+                                             overall = sd(overall)/3) 
+# all group
+df %>% dplyr::summarise(fa = mean(fa)/3,
+                       pu = mean(pu)/3,
+                       ae = mean(ae)/3,
+                       rw = mean(rw)/3,
+                       overall = mean(overall)/3) 
+
+df %>% dplyr::summarise(fa = sd(fa)/3,
+                        pu = sd(pu)/3,
+                        ae = sd(ae)/3,
+                        rw = sd(rw)/3,
+                        overall = sd(overall)/3)
+```
+
+
+```{r analysis testing}
+kruskal.test(fa ~ method, data=df)
+kruskal.test(pu ~ method, data=df)
+kruskal.test(ae ~ method, data=df)
+kruskal.test(rw ~ method, data=df)
+kruskal.test(overall ~ method, data=df)
+
+library(userfriendlyscience)
+oneway(df$method, y = df$fa, posthoc = 'games-howell')
+oneway(df$method, y = df$pu, posthoc = 'games-howell')
+oneway(df$method, y = df$ae, posthoc = 'games-howell')
+oneway(df$method, y = df$rw, posthoc = 'games-howell')
+oneway(df$method, y = df$overall, posthoc = 'games-howell')
+
+
+df %>% group_by(method) %>% dplyr::summarise(fa = mean(fa)/3,
+                                             pu = mean(pu)/3,
+                                             ae = mean(ae)/3,
+                                             rw = mean(rw)/3,
+                                             overall = mean(overall)/3) 
+```
+
+
+```{r plot data}
+ggplot <- ggplot(df, aes(x = method, y = rw, fill = method)) +
+  geom_boxplot(outlier.shape = NA, alpha=0.9, outlier.fill = NULL,
+               notch = FALSE, notchwidth = 0.5, varwidth = TRUE) +
+  theme(legend.position = "top", legend.title=element_blank(), 
+        axis.text.x = element_text(angle = 0, hjust = 1)) +
+  xlab("") + ylab("Reward factor") +
+  scale_fill_brewer(palette="Blues") 
+ggplot
+ggsave("fig/plot_use_rw.pdf", device = "pdf",plot = ggplot,
+       dpi = 300, height = 3, width = 3)
+```
+
+
+
