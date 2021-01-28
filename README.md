@@ -4,7 +4,7 @@ Evaluation of crowdsourced data labeling for mobile activity recognition for IMW
 
 /recognition for mobile activity recognition using Boosting
 
-/inaccuracy for inaccuracy prediction
+/inaccuracy for inaccuracy analysis
 
 /data_analysis for data analysis and visualization
 
